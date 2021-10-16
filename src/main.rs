@@ -3,8 +3,9 @@ use futures::stream::{StreamExt};
 use std::io::Write;
 use regex::Regex;
 
+mod model;
 mod client;
-mod info;
+
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     println!("Rokrs is starting scanning local network for roku devices!");
@@ -69,6 +70,14 @@ async fn main() -> std::io::Result<()> {
                 }
                 device = devices.get_mut(idx).unwrap();
             },
+            "tv-channels" => {
+                let channels = device.tv_channels().await.unwrap();
+                println!("{:?}", channels);
+            },
+            "active-channel" => {
+                let channel = device.active_channel().await.unwrap();
+                println!("{:?}", channel);
+            },
             "exit" => {
                 println!("Exiting.");
                 std::process::exit(0);
@@ -85,7 +94,7 @@ async fn scan() -> std::io::Result<Vec<client::Device>> {
     let mut devices = vec![];
     while let Some(response) = responses.next().await {
         let response = response.unwrap();
-        let device = info::fetch(response.location()).await.unwrap();
+        let device = fetch(response.location()).await.unwrap();
         println!("{}. {}", devices.len()+1, device.model_name);
         println!("Name: {}", device.user_device_name);
         println!("Location: {}", device.user_device_location.clone().unwrap_or("Unknown".to_string()));
@@ -93,4 +102,14 @@ async fn scan() -> std::io::Result<Vec<client::Device>> {
         devices.push(client::new(response.location().to_string(), device));
     }
     Ok(devices)
+}
+
+use serde_xml_rs::{from_str};
+//fetches info on a given roku device
+pub async fn fetch<'a>(device_url: &'a str) -> Result<crate::model::DeviceInfo, reqwest::Error> {
+    let resp = reqwest::get(format!("{}query/device-info", device_url))
+        .await?
+        .text()
+        .await?;
+    Ok(from_str(&*resp).unwrap())
 }

@@ -1,5 +1,4 @@
 use serde::{Serialize, Deserialize};
-use serde_xml_rs::{from_str};
 use serde;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -132,13 +131,4 @@ pub struct DeviceInfo {
     pub grandcentral_version: String,
     #[serde(rename = "davinci-version")]
     pub davinci_version: String,
-}
-
-//fetches info on a given roku device
-pub async fn fetch<'a>(device_url: &'a str) -> Result<DeviceInfo, reqwest::Error> {
-    let resp = reqwest::get(format!("{}query/device-info", device_url))
-        .await?
-        .text()
-        .await?;
-    Ok(from_str(&*resp).unwrap())
 }
